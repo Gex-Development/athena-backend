@@ -106,3 +106,24 @@ def test_pedido_separa_base_da_oferta_do_valor_cobrado():
 
     assert {"valorSemTaxasUsd", "valorCobradoUsd"} <= set(pedido)
     assert "valorUsd" not in pedido
+
+
+def test_so_painel_e_indicadores_ficam_provisorios():
+    operacoes = operacoes_do_contrato()
+    provisorias = {
+        chave
+        for chave, operacao in operacoes.items()
+        if operacao.get("x-estabilidade") == "provisorio"
+    }
+
+    assert provisorias == {("GET", "/chatwoot/conversas/{id}"), ("GET", "/agente/indicadores")}
+    assert all("x-estabilidade" in operacao for operacao in operacoes.values())
+
+
+def test_liberar_motivo_exige_justificativa_e_recusa_motivo_bloqueado():
+    put = operacoes_do_contrato()[("PUT", "/agente/motivos/{codigo}")]
+    corpo = put["requestBody"]["content"]["application/json"]["schema"]
+
+    assert "justificativa" in corpo["required"]
+    assert corpo["properties"]["justificativa"]["minLength"] >= 1
+    assert "bloqueado_por_regra" in put["responses"]["409"]["description"]

@@ -19,6 +19,8 @@ tags:
     description: Painel da conversa aberta no Chatwoot (todos os papéis).
   - name: Command Center
     description: Desempenho do agente (só admin).
+  - name: Controle
+    description: Liga, desliga e ajusta o agente (só admin; toda mudança é auditada).
   - name: Entrada
     description: Webhooks. Não é chamado pelo Front.
 security:
@@ -56,7 +58,13 @@ paths:
   /conversations/{id}: { $ref: "caminhos/chat.yaml#/conversa" }
   /chatwoot/conversas/{id}: { $ref: "caminhos/conversa.yaml#/painel" }
   /sugestoes/{id}/feedback: { $ref: "caminhos/conversa.yaml#/feedback" }
+  /agente/indicadores: { $ref: "caminhos/command-center.yaml#/indicadores" }
+  /agente/fila: { $ref: "caminhos/command-center.yaml#/fila" }
   /agente/eventos: { $ref: "caminhos/command-center.yaml#/eventos" }
+  /agente/motivos: { $ref: "caminhos/controle.yaml#/motivos" }
+  /agente/motivos/{codigo}: { $ref: "caminhos/controle.yaml#/motivo" }
+  /agente/parada: { $ref: "caminhos/controle.yaml#/parada" }
+  /agente/cortes: { $ref: "caminhos/controle.yaml#/cortes" }
   /webhooks/chatwoot: { $ref: "caminhos/entrada.yaml#/webhookChatwoot" }
 
 components:
