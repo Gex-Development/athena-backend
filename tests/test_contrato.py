@@ -120,10 +120,19 @@ def test_so_painel_e_indicadores_ficam_provisorios():
     assert all("x-estabilidade" in operacao for operacao in operacoes.values())
 
 
-def test_liberar_motivo_exige_justificativa_e_recusa_motivo_bloqueado():
-    put = operacoes_do_contrato()[("PUT", "/agente/motivos/{codigo}")]
-    corpo = put["requestBody"]["content"]["application/json"]["schema"]
+def test_regras_do_controle_ficam_travadas():
+    operacoes = operacoes_do_contrato()
+    motivo = operacoes[("PUT", "/agente/motivos/{codigo}")]
+    corpo = motivo["requestBody"]["content"]["application/json"]["schema"]
+    cortes = operacoes[("PUT", "/agente/cortes")]
+    evento = carregar("componentes.yaml")["components"]["schemas"]["Evento"]
 
     assert "justificativa" in corpo["required"]
-    assert corpo["properties"]["justificativa"]["minLength"] >= 1
-    assert "bloqueado_por_regra" in put["responses"]["409"]["description"]
+    assert corpo["properties"]["justificativa"]["minLength"] == 10
+    assert "bloqueado_por_regra" in motivo["responses"]["409"]["description"]
+    assert "corte_invalido" in cortes["responses"]["409"]["description"]
+    assert cortes["requestBody"]["content"]["application/json"]["schema"]["minItems"] == 1
+    for chave in (("PUT", "/agente/motivos/{codigo}"), ("POST", "/agente/parada")):
+        assert "controle_alterado" in operacoes[chave]["description"]
+    assert "controle_alterado" in cortes["description"]
+    assert "null" in evento["properties"]["conversaId"]["type"]

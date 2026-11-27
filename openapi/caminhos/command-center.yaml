@@ -41,9 +41,7 @@ indicadores:
     responses:
       "200":
         description: Totais do período e série diária
-        content:
-          application/json:
-            schema: { $ref: "../componentes.yaml#/components/schemas/Indicadores" }
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/Indicadores" } } }
       "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
@@ -67,9 +65,8 @@ fila:
               type: object
               required: [itens, proximoCursor]
               properties:
-                itens:
-                  type: array
-                  items: { $ref: "../componentes.yaml#/components/schemas/ItemFila" }
+                itens: { type: array, items: { $ref: "../componentes.yaml#/components/schemas/ItemFila" } }
                 proximoCursor: { type: [string, "null"] }
       "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }

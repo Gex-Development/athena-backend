@@ -174,7 +174,9 @@ components:
       required: [id, conversaId, tipo, emUtc, versaoCatalogo, duracaoMs, dados]
       properties:
         id: { type: string }
-        conversaId: { type: integer, description: ID da conversa no Chatwoot }
+        conversaId:
+          type: [integer, "null"]
+          description: ID da conversa no Chatwoot. Nulo só em evento global (`controle_alterado`).
         tipo: { $ref: "#/components/schemas/TipoEvento" }
         emUtc: { type: string, format: date-time }
         versaoCatalogo: { type: [string, "null"] }
@@ -191,9 +193,7 @@ components:
       properties:
         periodo:
           type: object
-          properties:
-            de: { type: string, format: date }
-            ate: { type: string, format: date }
+          properties: { de: { type: string, format: date }, ate: { type: string, format: date } }
         totais: { $ref: "#/components/schemas/IndicadoresDia" }
         porDia:
           type: array
@@ -249,14 +249,15 @@ components:
           type: boolean
           description: Saúde, chargeback e fraude nunca vão para automático.
         pctSemEdicao14d: { type: [number, "null"] }
-        alteradoPor: { type: [string, "null"] }
+        justificativa: { type: [string, "null"] }
+        alteradoPor: { type: [string, "null"], description: E-mail do admin que mudou }
         alteradoEm: { type: [string, "null"], format: date-time }
 
     Parada:
       type: object
       required: [ativo]
       properties:
-        ativo: { type: boolean }
+        ativo: { type: boolean, description: "true = agente parado (só copiloto)" }
         motivo: { type: [string, "null"] }
         alteradoPor: { type: [string, "null"] }
         alteradoEm: { type: [string, "null"], format: date-time }
