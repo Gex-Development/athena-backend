@@ -1,0 +1,38 @@
+[project]
+name = "athena-backend"
+version = "0.1.0"
+description = "Athena V2 · agente de atendimento GEX"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "agno[os,pgvector,psycopg,openai]==3.1.12",
+    "alembic>=1.16",
+    "fastapi>=0.115",
+    "pydantic-settings>=2.6",
+    "pyjwt[crypto]>=2.10",
+    "uvicorn[standard]>=0.32",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16",
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["athena"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

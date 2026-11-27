@@ -1,0 +1,29 @@
+services:
+  athena-db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: athena
+      POSTGRES_PASSWORD: athena
+      POSTGRES_DB: athena
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  athena-api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ATHENA_AMBIENTE: local
+      ATHENA_DATABASE_URL: postgresql+psycopg://athena:athena@athena-db:5432/athena
+    depends_on:
+      - athena-db
+
+volumes:
+  pgdata:
