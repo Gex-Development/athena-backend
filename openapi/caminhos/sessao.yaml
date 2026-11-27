@@ -1,0 +1,85 @@
+googleStart:
+  get:
+    tags: [Sessão]
+    summary: Começa o login com Google
+    x-estabilidade: firme
+    security: []
+    responses:
+      "302":
+        description: Redireciona para o Google e grava o cookie `athena_oauth_state` (10 min).
+
+googleCallback:
+  get:
+    tags: [Sessão]
+    summary: Volta do Google e cria a sessão
+    x-estabilidade: firme
+    security: []
+    parameters:
+      - { name: code, in: query, required: true, schema: { type: string } }
+      - { name: state, in: query, required: true, schema: { type: string } }
+    responses:
+      "302":
+        description: |
+          Domínio permitido: grava `athena_sessao` e vai para `/`.
+          Domínio de fora: vai para `/login?erro=dominio`, sem sessão.
+      "400": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+magicLink:
+  post:
+    tags: [Sessão]
+    summary: Envia o link de acesso por e-mail
+    x-estabilidade: firme
+    security: []
+    description: |
+      Responde igual para qualquer e-mail, com ou sem acesso. Só e-mails dos domínios
+      permitidos recebem o link, que vale 15 minutos e funciona uma vez só.
+      Limite de 3 pedidos por e-mail a cada 15 minutos.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [email]
+            properties:
+              email: { type: string, format: email, maxLength: 254 }
+    responses:
+      "204": { description: Pedido aceito }
+      "422": { description: E-mail em formato inválido }
+      "429": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+magicLinkEntrar:
+  get:
+    tags: [Sessão]
+    summary: Entra pelo link recebido por e-mail
+    x-estabilidade: firme
+    security: []
+    parameters:
+      - { name: token, in: query, required: true, schema: { type: string } }
+    responses:
+      "302":
+        description: |
+          Link válido: grava `athena_sessao` e vai para `/`.
+          Link usado, vencido ou falso: vai para `/login?erro=link`.
+
+logout:
+  post:
+    tags: [Sessão]
+    summary: Encerra a sessão
+    x-estabilidade: firme
+    responses:
+      "204": { description: Sessão encerrada e cookie apagado }
+
+me:
+  get:
+    tags: [Sessão]
+    summary: Quem está logado
+    x-estabilidade: firme
+    description: Quem está em `ATHENA_ADMINS` é admin. O resto dos domínios permitidos é analista.
+    responses:
+      "200":
+        description: Usuário da sessão
+        content:
+          application/json:
+            schema: { $ref: "../componentes.yaml#/components/schemas/Usuario" }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }

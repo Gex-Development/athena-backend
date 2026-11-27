@@ -1,0 +1,26 @@
+eventos:
+  get:
+    tags: [Command Center]
+    summary: Trilha de decisões do agente
+    x-estabilidade: firme
+    x-papel: admin
+    parameters:
+      - { name: conversa, in: query, schema: { type: integer } }
+      - { name: tipo, in: query, schema: { $ref: "../componentes.yaml#/components/schemas/TipoEvento" } }
+      - { name: de, in: query, schema: { type: string, format: date-time } }
+      - { name: cursor, in: query, schema: { type: string, pattern: "^\\d+$" } }
+    responses:
+      "200":
+        description: Até 50 eventos, do mais recente para o mais antigo
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itens, proximoCursor]
+              properties:
+                itens:
+                  type: array
+                  items: { $ref: "../componentes.yaml#/components/schemas/Evento" }
+                proximoCursor: { type: [string, "null"] }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
