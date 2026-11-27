@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from athena.api.agente import router as agente_router
@@ -16,6 +17,15 @@ def erro_no_formato_do_contrato(_: Request, exc: HTTPException) -> JSONResponse:
     if isinstance(exc.detail, dict):
         return JSONResponse(exc.detail, status_code=exc.status_code)
     return JSONResponse({"error": str(exc.detail), "code": "error"}, status_code=exc.status_code)
+
+
+@app.exception_handler(RequestValidationError)
+def validacao_no_formato_do_contrato(_: Request, exc: RequestValidationError) -> JSONResponse:
+    campos = sorted({".".join(str(p) for p in erro["loc"][1:]) for erro in exc.errors()})
+    return JSONResponse(
+        {"error": f"Dados inválidos: {', '.join(campos)}.", "code": "invalid_request"},
+        status_code=422,
+    )
 
 
 @app.get("/health")

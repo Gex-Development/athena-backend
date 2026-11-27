@@ -34,7 +34,8 @@ def eventos(
         tipo=tipo,
         desde=de,
         antes_de_id=int(cursor) if cursor else None,
-        limite=POR_PAGINA,
+        limite=POR_PAGINA + 1,
     )
-    proximo = itens[-1].id if len(itens) == POR_PAGINA else None
-    return PaginaEventos(itens=itens, proximoCursor=proximo)
+    pagina = itens[:POR_PAGINA]
+    proximo = pagina[-1].id if len(itens) > POR_PAGINA else None
+    return PaginaEventos(itens=pagina, proximoCursor=proximo)

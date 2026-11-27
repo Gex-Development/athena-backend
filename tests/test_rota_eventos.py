@@ -64,5 +64,35 @@ def test_admin_ve_a_trilha_da_conversa(cliente):
     assert [i["tipo"] for i in corpo["itens"]] == ["classificada", "recebida"]
     assert corpo["itens"][0]["conversaId"] == 77
     assert corpo["proximoCursor"] is None
-    assert cliente.get("/v1/agente/eventos?cursor=abc").status_code == 422
+    invalido = cliente.get("/v1/agente/eventos?cursor=abc")
+    assert invalido.status_code == 422
+    assert invalido.json()["code"] == "invalid_request"
+    assert set(invalido.json()) == {"error", "code"}
     motor.dispose()
+
+
+@pytest.mark.skipif(not URL_TESTE, reason="sem Postgres de teste")
+def test_ultima_pagina_cheia_vem_sem_cursor(cliente):
+    config = Config("alembic.ini")
+    config.set_main_option("sqlalchemy.url", URL_TESTE)
+    command.upgrade(config, "head")
+    motor = create_engine(URL_TESTE)
+    with motor.begin() as conexao:
+        conexao.execute(text("TRUNCATE athena.eventos"))
+    for _ in range(50):
+        registrar(motor, 5, TipoEvento.RECEBIDA)
+    app.dependency_overrides[get_engine] = lambda: motor
+    entrar(cliente, "chefe@gexcorp.com.br")
+
+    cheia = cliente.get("/v1/agente/eventos").json()
+    registrar(motor, 5, TipoEvento.RECEBIDA)
+    primeira = cliente.get("/v1/agente/eventos").json()
+    segunda = cliente.get(f"/v1/agente/eventos?cursor={primeira['proximoCursor']}").json()
+    motor.dispose()
+
+    assert len(cheia["itens"]) == 50
+    assert cheia["proximoCursor"] is None
+    assert len(primeira["itens"]) == 50
+    assert primeira["proximoCursor"] is not None
+    assert len(segunda["itens"]) == 1
+    assert segunda["proximoCursor"] is None
