@@ -5,9 +5,11 @@ chat:
     x-estabilidade: firme
     description: |
       Mesmo formato da Athena atual. Resposta `text/event-stream` com os eventos:
-      `meta` {userMessageId, replyId}, `step` {id, kind, label, status},
-      `delta` {text}, `done` {replyId, text, createdAt, steps}, `error` {message, code}.
-      Comentário `: ping` a cada 15 s.
+      `meta` {conversationId, userMessageId, replyId}, `step` {id, kind, label, status},
+      `delta` {text}, `done` {conversationId, replyId, text, createdAt, steps},
+      `error` {message, code}. Comentário `: ping` a cada 15 s.
+      Sem `conversationId` no pedido, o backend cria a conversa e devolve o id novo em `meta`.
+      Com `conversationId` de outro analista, responde 404.
     requestBody:
       required: true
       content:
@@ -19,9 +21,9 @@ chat:
               conversationId: { type: string }
               temporary: { type: boolean, default: false }
               text: { type: string, minLength: 1, maxLength: 8000 }
-              chatwootConversaId:
+              conversaId:
                 type: integer
-                description: Preenchido quando o chat abre dentro da aba do Chatwoot.
+                description: ID da conversa no Chatwoot, quando o chat abre dentro da aba dele.
     responses:
       "200":
         description: Stream de eventos
@@ -29,7 +31,9 @@ chat:
           text/event-stream:
             schema: { type: string }
       "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "409": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "429": { $ref: "../componentes.yaml#/components/responses/Erro" }
 
 parar:
@@ -37,10 +41,12 @@ parar:
     tags: [Chat]
     summary: Para a geração de uma resposta
     x-estabilidade: firme
+    description: Só para respostas da sessão. Resposta de outro analista responde 404.
     parameters:
       - { name: replyId, in: path, required: true, schema: { type: string } }
     responses:
       "204": { description: Parado }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
 
 conversas:
@@ -48,6 +54,7 @@ conversas:
     tags: [Chat]
     summary: Conversas do analista com a Athena
     x-estabilidade: firme
+    description: Só as conversas do usuário da sessão.
     parameters:
       - { name: cursor, in: query, schema: { type: string } }
     responses:
@@ -66,6 +73,9 @@ conversas:
       "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
 
 conversa:
+  description: |
+    Só age sobre conversa do usuário da sessão. Id de conversa de outro analista responde 404,
+    igual a id inexistente, para não revelar que a conversa existe.
   parameters:
     - { name: id, in: path, required: true, schema: { type: string } }
   get:
@@ -86,6 +96,7 @@ conversa:
                     mensagens:
                       type: array
                       items: { $ref: "../componentes.yaml#/components/schemas/MensagemAthena" }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
   delete:
     tags: [Chat]
@@ -93,4 +104,5 @@ conversa:
     x-estabilidade: firme
     responses:
       "204": { description: Apagada }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "404": { $ref: "../componentes.yaml#/components/responses/Erro" }

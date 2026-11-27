@@ -43,4 +43,6 @@ feedback:
               comentario: { type: string, maxLength: 500 }
     responses:
       "204": { description: Registrado }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
