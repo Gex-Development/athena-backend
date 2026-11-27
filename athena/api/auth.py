@@ -109,6 +109,12 @@ def usuario_atual(
     )
 
 
+def exigir_admin(usuario: Annotated[Usuario, Depends(usuario_atual)]) -> Usuario:
+    if usuario.papel != "admin":
+        raise erro(403, "Só administradores acessam esta área.", "forbidden")
+    return usuario
+
+
 @router.get("/auth/google/start")
 def google_start(settings: Annotated[Settings, Depends(get_settings)]) -> RedirectResponse:
     state = secrets.token_urlsafe(32)
