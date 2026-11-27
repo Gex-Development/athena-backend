@@ -1,8 +1,11 @@
 import re
 from pathlib import Path
 
+import pytest
 import yaml
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, ValidationError
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 PASTA = Path(__file__).resolve().parent.parent / "openapi"
 
@@ -20,33 +23,47 @@ def referencias(no) -> list[str]:
     return []
 
 
-def test_schemas_dos_componentes_sao_json_schema_valido():
-    componentes = carregar("componentes.yaml")
+def validador(schema: str) -> Draft202012Validator:
+    recurso = Resource.from_contents(
+        carregar("componentes.yaml"), default_specification=DRAFT202012
+    )
+    registro = Registry().with_resource("urn:componentes", recurso)
+    alvo = {"$ref": f"urn:componentes#/components/schemas/{schema}"}
+    return Draft202012Validator(alvo, registry=registro)
 
-    for schema in componentes["schemas"].values():
+
+def test_schemas_dos_componentes_sao_json_schema_valido():
+    for schema in carregar("componentes.yaml")["components"]["schemas"].values():
         Draft202012Validator.check_schema(schema)
 
 
-def test_referencias_internas_dos_componentes_existem():
+def test_referencias_internas_usam_components_e_existem():
     componentes = carregar("componentes.yaml")
 
     for ref in referencias(componentes):
-        partes = re.fullmatch(r"#/(\w+)/(\w+)", ref)
+        partes = re.fullmatch(r"#/components/(\w+)/(\w+)", ref)
         assert partes, ref
         secao, nome = partes.groups()
-        assert nome in componentes[secao], ref
+        assert nome in componentes["components"][secao], ref
 
 
-def test_motivo_incerto_sai_nulo_com_palpite_separado():
-    classificacao = carregar("componentes.yaml")["schemas"]["Classificacao"]
+def test_motivo_so_vem_preenchido_com_confianca_alta():
+    classificacao = validador("Classificacao")
+    base = {"provavel": None, "versaoCatalogo": "v3.4"}
 
-    assert {"motivo", "provavel"} <= set(classificacao["required"])
-    assert "null" in classificacao["properties"]["motivo"]["type"]
-    assert "null" in classificacao["properties"]["provavel"]["type"]
+    classificacao.validate({**base, "motivo": "rastreio", "confianca": "alta"})
+    classificacao.validate(
+        {**base, "motivo": None, "provavel": "rastreio", "confianca": "a_confirmar"}
+    )
+    for confianca in ("a_confirmar", "indefinido"):
+        with pytest.raises(ValidationError):
+            classificacao.validate({**base, "motivo": "rastreio", "confianca": confianca})
+    with pytest.raises(ValidationError):
+        classificacao.validate({**base, "motivo": None, "confianca": "alta"})
 
 
 def test_pedido_separa_base_da_oferta_do_valor_cobrado():
-    pedido = carregar("componentes.yaml")["schemas"]["Pedido"]["properties"]
+    pedido = carregar("componentes.yaml")["components"]["schemas"]["Pedido"]["properties"]
 
     assert {"valorSemTaxasUsd", "valorCobradoUsd"} <= set(pedido)
     assert "valorUsd" not in pedido
