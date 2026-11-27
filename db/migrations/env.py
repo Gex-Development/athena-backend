@@ -1,10 +1,13 @@
+import sys
+
 from alembic import context
-from sqlalchemy import create_engine, text
+from sqlalchemy import Connection, create_engine, text
 
 from athena.config.settings import get_settings
 
 SCHEMA = "athena"
 TRAVA = "athena.migrations"
+ESPERA_TRAVA = "10min"
 
 
 def url_do_banco() -> str:
@@ -13,17 +16,37 @@ def url_do_banco() -> str:
 
 
 def migrar_offline() -> None:
-    context.configure(url=url_do_banco(), literal_binds=True, version_table_schema=SCHEMA)
+    context.configure(
+        url=url_do_banco(),
+        literal_binds=True,
+        version_table_schema=SCHEMA,
+        transactional_ddl=True,
+    )
     with context.begin_transaction():
         context.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
         context.run_migrations()
+
+
+def pegar_trava(conexao: Connection) -> None:
+    livre = conexao.execute(
+        text("SELECT pg_try_advisory_lock(hashtext(:t))"), {"t": TRAVA}
+    ).scalar_one()
+    if livre:
+        return
+    print(
+        f"Outra réplica está migrando. Esperando a trava por até {ESPERA_TRAVA}.",
+        file=sys.stderr,
+        flush=True,
+    )
+    conexao.execute(text(f"SET LOCAL lock_timeout = '{ESPERA_TRAVA}'"))
+    conexao.execute(text("SELECT pg_advisory_lock(hashtext(:t))"), {"t": TRAVA})
 
 
 def migrar_online() -> None:
     motor = create_engine(url_do_banco())
     try:
         with motor.connect() as conexao:
-            conexao.execute(text("SELECT pg_advisory_lock(hashtext(:t))"), {"t": TRAVA})
+            pegar_trava(conexao)
             try:
                 conexao.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}"))
                 conexao.commit()

@@ -33,7 +33,7 @@ uv run ruff format --check .
 uv run pytest
 ```
 
-Os testes de banco só rodam com `ATHENA_TEST_DATABASE_URL` apontando para um Postgres descartável, com nome terminado em `_teste` ou `_test` (por exemplo `postgresql+psycopg://athena:athena@127.0.0.1:5432/athena_teste`). Eles apagam e recriam tabelas, e recusam qualquer outro nome.
+Os testes de banco só rodam com `ATHENA_TEST_DATABASE_URL` apontando para um Postgres descartável, com nome terminado em `_teste` ou `_test` (por exemplo `postgresql+psycopg://athena:athena@127.0.0.1:5432/athena_teste`). Eles apagam e recriam tabelas, e recusam qualquer outro nome. A variável pode vir do ambiente ou do `.env`.
 
 A CI roda ruff, pytest e gitleaks em toda PR para `development` e `main`.
 

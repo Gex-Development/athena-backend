@@ -1,10 +1,12 @@
 import os
 import threading
+import time
 
 import pytest
 from agno.db.postgres import PostgresDb
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
 URL_TESTE = os.environ.get("ATHENA_TEST_DATABASE_URL")
@@ -65,20 +67,41 @@ def test_update_em_configuracao_atualiza_alterado_em():
 
 
 def test_segunda_replica_espera_a_trava_das_migrations():
+    command.upgrade(configuracao_alembic(), "head")
+    falhas: list[BaseException] = []
+
+    def rodar_replica() -> None:
+        try:
+            command.upgrade(configuracao_alembic(), "head")
+        except BaseException as falha:
+            falhas.append(falha)
+
     motor = create_engine(URL_TESTE)
     with motor.connect() as dona_da_trava:
         dona_da_trava.execute(text("SELECT pg_advisory_lock(hashtext('athena.migrations'))"))
-        replica = threading.Thread(target=command.upgrade, args=(configuracao_alembic(), "head"))
+        replica = threading.Thread(target=rodar_replica)
         replica.start()
-        replica.join(timeout=2)
-        esperou = replica.is_alive()
+        esperando = 0
+        for _ in range(50):
+            esperando = dona_da_trava.execute(
+                text("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND NOT granted")
+            ).scalar_one()
+            if esperando:
+                break
+            time.sleep(0.1)
         dona_da_trava.execute(text("SELECT pg_advisory_unlock(hashtext('athena.migrations'))"))
         dona_da_trava.commit()
     replica.join(timeout=30)
+    with motor.connect() as conexao:
+        versao = conexao.execute(
+            text("SELECT version_num FROM athena.alembic_version")
+        ).scalar_one()
     motor.dispose()
 
-    assert esperou
+    assert esperando == 1
     assert not replica.is_alive()
+    assert falhas == []
+    assert versao == ScriptDirectory.from_config(configuracao_alembic()).get_current_head()
 
 
 def test_modo_offline_so_imprime_sql(capsys):
@@ -87,8 +110,19 @@ def test_modo_offline_so_imprime_sql(capsys):
     command.upgrade(configuracao_alembic(banco_inexistente), "head", sql=True)
 
     saida = capsys.readouterr().out
+    assert saida.lstrip().startswith("BEGIN;")
+    assert saida.rstrip().endswith("COMMIT;")
     assert "CREATE SCHEMA IF NOT EXISTS athena" in saida
     assert "CREATE TABLE athena.configuracao" in saida
+
+
+def test_guarda_recusa_banco_que_nao_e_descartavel():
+    from conftest import banco_descartavel
+
+    assert banco_descartavel("postgresql+psycopg://a:b@h:5432/athena_teste")
+    assert banco_descartavel("postgresql://a:b@h/athena_test")
+    assert not banco_descartavel("postgresql+psycopg://a:b@h:5432/athena")
+    assert not banco_descartavel("postgresql://a:b@h/athena_teste_real")
 
 
 def test_tabelas_do_agno_ficam_no_schema_ai_sem_conflito():
