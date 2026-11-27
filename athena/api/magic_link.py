@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import secrets
 import smtplib
 import ssl
@@ -16,6 +17,7 @@ from athena.config.banco import get_engine
 from athena.config.settings import Settings, get_settings
 
 router = APIRouter(prefix="/v1/auth/magic-link")
+logger = logging.getLogger("athena.magic_link")
 
 
 class PedidoLink(BaseModel):
@@ -44,12 +46,32 @@ def enviar_email(settings: Settings, para: str, link: str) -> None:
         "<p>Se você não pediu este acesso, ignore este e-mail.</p>",
         subtype="html",
     )
-    contexto = ssl.create_default_context()
-    with smtplib.SMTP_SSL(
-        settings.smtp_host, settings.smtp_porta, context=contexto, timeout=20
-    ) as s:
-        s.login(settings.smtp_usuario or "", settings.smtp_senha or "")
-        s.send_message(mensagem)
+    try:
+        with abrir_smtp(settings) as s:
+            if not isinstance(s, smtplib.SMTP_SSL):
+                s.starttls(context=ssl.create_default_context())
+            s.login(settings.smtp_usuario or "", settings.smtp_senha or "")
+            s.send_message(mensagem)
+    except (OSError, smtplib.SMTPException) as falha:
+        logger.error(
+            "Falha ao enviar o link de acesso por %s:%s (%s)",
+            settings.smtp_host,
+            settings.smtp_porta,
+            type(falha).__name__,
+        )
+        return
+    logger.info("Link de acesso enviado para o domínio %s", para.rsplit("@", 1)[-1])
+
+
+def abrir_smtp(settings: Settings) -> smtplib.SMTP:
+    if settings.smtp_porta == 465:
+        return smtplib.SMTP_SSL(
+            settings.smtp_host,
+            settings.smtp_porta,
+            context=ssl.create_default_context(),
+            timeout=20,
+        )
+    return smtplib.SMTP(settings.smtp_host, settings.smtp_porta, timeout=20)
 
 
 @router.post("", status_code=204)
