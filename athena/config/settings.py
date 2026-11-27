@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     dominios_permitidos: str = "gexcorp.com.br,institutoexperience.com.br"
     admins: str = ""
     sessao_dias: int = 30
+    eventos_retencao_dias: int = 180
 
     @field_validator("jwt_chave_publica", "jwt_chave_privada")
     @classmethod
