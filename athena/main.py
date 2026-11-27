@@ -10,7 +10,8 @@ from athena.config.settings import ROTAS_PUBLICAS_AGENTOS, get_settings
 
 def configurar_logs(nivel: str) -> None:
     raiz = logging.getLogger("athena")
-    raiz.setLevel(nivel)
+    nome = nivel.strip().upper()
+    raiz.setLevel(nome if nome in logging.getLevelNamesMapping() else logging.INFO)
     if not raiz.handlers:
         manipulador = logging.StreamHandler()
         manipulador.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))

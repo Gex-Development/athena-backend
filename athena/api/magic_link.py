@@ -52,9 +52,12 @@ def enviar_email(settings: Settings, para: str, link: str) -> None:
                 s.starttls(context=ssl.create_default_context())
             s.login(settings.smtp_usuario or "", settings.smtp_senha or "")
             s.send_message(mensagem)
-    except OSError, smtplib.SMTPException:
-        logger.exception(
-            "Falha ao enviar o link de acesso por %s:%s", settings.smtp_host, settings.smtp_porta
+    except (OSError, smtplib.SMTPException) as falha:
+        logger.error(
+            "Falha ao enviar o link de acesso por %s:%s (%s)",
+            settings.smtp_host,
+            settings.smtp_porta,
+            type(falha).__name__,
         )
         return
     logger.info("Link de acesso enviado para o domínio %s", para.rsplit("@", 1)[-1])

@@ -75,3 +75,38 @@ def test_falha_no_envio_vira_log_sem_derrubar(monkeypatch, caplog):
 
     assert "Falha ao enviar o link de acesso por mail.gexcorp.com.br:465" in caplog.text
     assert "ana@" not in caplog.text
+
+
+def test_destinatario_recusado_nao_vaza_o_email(smtp, monkeypatch, caplog):
+    def recusar_destinatario(self, mensagem):
+        raise smtplib.SMTPRecipientsRefused({mensagem["To"]: (550, b"no such user")})
+
+    monkeypatch.setattr(SmtpFalso, "send_message", recusar_destinatario)
+
+    magic_link.enviar_email(configuracao(587), "ana@gexcorp.com.br", "https://link")
+
+    assert "(SMTPRecipientsRefused)" in caplog.text
+    assert "ana@" not in caplog.text
+
+
+def test_falha_no_starttls_nao_faz_login(smtp, monkeypatch, caplog):
+    def falhar(self, **_):
+        raise smtplib.SMTPNotSupportedError("STARTTLS extension not supported by server.")
+
+    monkeypatch.setattr(SmtpFalso, "starttls", falhar)
+
+    magic_link.enviar_email(configuracao(587), "ana@gexcorp.com.br", "https://link")
+
+    passos = [p[0] for p in SmtpFalso.ultimo.passos]
+    assert "login" not in passos
+    assert "enviar" not in passos
+    assert "(SMTPNotSupportedError)" in caplog.text
+
+
+def test_nivel_de_log_em_minusculas_ou_invalido_nao_derruba():
+    from athena.main import configurar_logs
+
+    configurar_logs("debug")
+    assert logging.getLogger("athena").level == logging.DEBUG
+    configurar_logs("verboso")
+    assert logging.getLogger("athena").level == logging.INFO
