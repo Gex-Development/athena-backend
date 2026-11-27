@@ -1,0 +1,96 @@
+chat:
+  post:
+    tags: [Chat]
+    summary: Pergunta do analista, resposta em streaming
+    x-estabilidade: firme
+    description: |
+      Mesmo formato da Athena atual. Resposta `text/event-stream` com os eventos:
+      `meta` {userMessageId, replyId}, `step` {id, kind, label, status},
+      `delta` {text}, `done` {replyId, text, createdAt, steps}, `error` {message, code}.
+      Comentário `: ping` a cada 15 s.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [text]
+            properties:
+              conversationId: { type: string }
+              temporary: { type: boolean, default: false }
+              text: { type: string, minLength: 1, maxLength: 8000 }
+              chatwootConversaId:
+                type: integer
+                description: Preenchido quando o chat abre dentro da aba do Chatwoot.
+    responses:
+      "200":
+        description: Stream de eventos
+        content:
+          text/event-stream:
+            schema: { type: string }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "409": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "429": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+parar:
+  post:
+    tags: [Chat]
+    summary: Para a geração de uma resposta
+    x-estabilidade: firme
+    parameters:
+      - { name: replyId, in: path, required: true, schema: { type: string } }
+    responses:
+      "204": { description: Parado }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+conversas:
+  get:
+    tags: [Chat]
+    summary: Conversas do analista com a Athena
+    x-estabilidade: firme
+    parameters:
+      - { name: cursor, in: query, schema: { type: string } }
+    responses:
+      "200":
+        description: Lista paginada, da mais recente para a mais antiga
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itens, proximoCursor]
+              properties:
+                itens:
+                  type: array
+                  items: { $ref: "../componentes.yaml#/components/schemas/ConversaAthena" }
+                proximoCursor: { type: [string, "null"] }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+conversa:
+  parameters:
+    - { name: id, in: path, required: true, schema: { type: string } }
+  get:
+    tags: [Chat]
+    summary: Mensagens de uma conversa
+    x-estabilidade: firme
+    responses:
+      "200":
+        description: Conversa com mensagens
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: "../componentes.yaml#/components/schemas/ConversaAthena" }
+                - type: object
+                  required: [mensagens]
+                  properties:
+                    mensagens:
+                      type: array
+                      items: { $ref: "../componentes.yaml#/components/schemas/MensagemAthena" }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
+  delete:
+    tags: [Chat]
+    summary: Apaga a conversa
+    x-estabilidade: firme
+    responses:
+      "204": { description: Apagada }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }

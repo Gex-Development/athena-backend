@@ -13,6 +13,10 @@ servers:
   - url: /v1
 tags:
   - name: Sessão
+  - name: Chat
+    description: Chat do analista (todos os papéis).
+  - name: Conversa
+    description: Painel da conversa aberta no Chatwoot (todos os papéis).
   - name: Command Center
     description: Desempenho do agente (só admin).
   - name: Entrada
@@ -46,6 +50,12 @@ paths:
   /auth/magic-link/entrar: { $ref: "caminhos/sessao.yaml#/magicLinkEntrar" }
   /auth/logout: { $ref: "caminhos/sessao.yaml#/logout" }
   /me: { $ref: "caminhos/sessao.yaml#/me" }
+  /chat: { $ref: "caminhos/chat.yaml#/chat" }
+  /chat/{replyId}/stop: { $ref: "caminhos/chat.yaml#/parar" }
+  /conversations: { $ref: "caminhos/chat.yaml#/conversas" }
+  /conversations/{id}: { $ref: "caminhos/chat.yaml#/conversa" }
+  /chatwoot/conversas/{id}: { $ref: "caminhos/conversa.yaml#/painel" }
+  /sugestoes/{id}/feedback: { $ref: "caminhos/conversa.yaml#/feedback" }
   /agente/eventos: { $ref: "caminhos/command-center.yaml#/eventos" }
   /webhooks/chatwoot: { $ref: "caminhos/entrada.yaml#/webhookChatwoot" }
 
