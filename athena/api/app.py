@@ -21,11 +21,20 @@ def erro_no_formato_do_contrato(_: Request, exc: HTTPException) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 def validacao_no_formato_do_contrato(_: Request, exc: RequestValidationError) -> JSONResponse:
-    campos = sorted({".".join(str(p) for p in erro["loc"][1:]) for erro in exc.errors()})
-    return JSONResponse(
-        {"error": f"Dados inválidos: {', '.join(campos)}.", "code": "invalid_request"},
-        status_code=422,
+    campos = sorted(
+        {
+            ".".join(p for p in erro["loc"][1:] if isinstance(p, str))
+            for erro in exc.errors()
+            if erro["type"] != "json_invalid"
+        }
+        - {""}
     )
+    mensagem = (
+        f"Dados inválidos: {', '.join(campos)}."
+        if campos
+        else "Corpo da requisição ausente ou inválido."
+    )
+    return JSONResponse({"error": mensagem, "code": "invalid_request"}, status_code=422)
 
 
 @app.get("/health")
