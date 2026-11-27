@@ -4,8 +4,12 @@ from pathlib import Path
 import pytest
 import yaml
 from jsonschema import Draft202012Validator, ValidationError
+from openapi_spec_validator import validate
+from openapi_spec_validator.readers import read_from_filename
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
+
+from athena.api.app import app
 
 PASTA = Path(__file__).resolve().parent.parent / "openapi"
 
@@ -30,6 +34,41 @@ def validador(schema: str) -> Draft202012Validator:
     registro = Registry().with_resource("urn:componentes", recurso)
     alvo = {"$ref": f"urn:componentes#/components/schemas/{schema}"}
     return Draft202012Validator(alvo, registry=registro)
+
+
+def operacoes_do_contrato() -> dict[tuple[str, str], dict]:
+    operacoes = {}
+    for caminho, item in carregar("openapi.yaml")["paths"].items():
+        if "$ref" in item:
+            arquivo, chave = item["$ref"].split("#/")
+            item = carregar(arquivo)[chave]
+        for metodo, operacao in item.items():
+            if metodo in {"get", "post", "put", "delete", "patch"}:
+                operacoes[(metodo.upper(), caminho)] = operacao
+    return operacoes
+
+
+def test_contrato_e_openapi_3_1_valido():
+    spec, base_uri = read_from_filename(str(PASTA / "openapi.yaml"))
+
+    validate(spec, base_uri=base_uri)
+
+
+def test_x_implementada_bate_com_as_rotas_do_backend():
+    no_backend = {
+        (metodo.upper(), caminho.removeprefix("/v1"))
+        for caminho, item in app.openapi()["paths"].items()
+        if caminho.startswith("/v1/") or caminho == "/health"
+        for metodo in item
+    }
+    assert len(no_backend) >= 8
+    marcadas = {
+        chave
+        for chave, operacao in operacoes_do_contrato().items()
+        if operacao.get("x-implementada") is True
+    }
+
+    assert marcadas == no_backend
 
 
 def test_schemas_dos_componentes_sao_json_schema_valido():

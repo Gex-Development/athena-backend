@@ -1,12 +1,35 @@
 openapi: 3.1.0
 info:
-  title: Athena
-  version: 0.1.0
+  title: Athena V2 API (Front ↔ Backend)
+  version: 0.2.0
+  description: |
+    Contrato v0 entre o Athena Front (React + Astryx) e o Athena Backend (Agno + FastAPI).
+    Datas sempre em UTC (ISO 8601). Estabilidade de cada rota em `x-estabilidade`
+    (`firme` ou `provisorio`). Regras de mudança em `openapi/README.md`.
+
+    Sessão: o próprio backend faz o login com Google (OAuth) e com Magic Link e grava o
+    cookie `athena_sessao`. Não há proxy de autenticação na frente da API.
+servers:
+  - url: /v1
+tags:
+  - name: Sessão
+  - name: Command Center
+    description: Desempenho do agente (só admin).
+  - name: Entrada
+    description: Webhooks. Não é chamado pelo Front.
+security:
+  - sessao: []
+
 paths:
   /health:
+    servers:
+      - url: /
     get:
       operationId: health
       summary: Verifica se a API está no ar
+      x-estabilidade: firme
+      x-implementada: true
+      security: []
       responses:
         "200":
           description: API no ar
@@ -16,8 +39,32 @@ paths:
                 type: object
                 required: [status]
                 properties:
-                  status:
-                    type: string
-                    const: ok
-              example:
-                status: ok
+                  status: { type: string, const: ok }
+  /auth/google/start: { $ref: "caminhos/sessao.yaml#/googleStart" }
+  /auth/google/callback: { $ref: "caminhos/sessao.yaml#/googleCallback" }
+  /auth/magic-link: { $ref: "caminhos/sessao.yaml#/magicLink" }
+  /auth/magic-link/entrar: { $ref: "caminhos/sessao.yaml#/magicLinkEntrar" }
+  /auth/logout: { $ref: "caminhos/sessao.yaml#/logout" }
+  /me: { $ref: "caminhos/sessao.yaml#/me" }
+  /agente/eventos: { $ref: "caminhos/command-center.yaml#/eventos" }
+  /webhooks/chatwoot: { $ref: "caminhos/entrada.yaml#/webhookChatwoot" }
+
+components:
+  securitySchemes:
+    sessao:
+      type: apiKey
+      in: cookie
+      name: athena_sessao
+      description: |
+        JWT RS256 emitido pelo backend depois do login com Google ou Magic Link. Vale 30 dias,
+        com HttpOnly, Secure e SameSite=Lax, e continua válido depois de fechar o navegador.
+        A mesma chave pública protege as rotas do AgentOS.
+    hmacChatwoot:
+      type: apiKey
+      in: header
+      name: X-Chatwoot-Signature
+      description: |
+        Confirmado no Chatwoot 4.19.0 (`lib/webhooks/trigger.rb`). O valor é
+        `sha256=<hex>`, com o HMAC-SHA256 de `"<X-Chatwoot-Timestamp>.<corpo cru>"` usando o
+        secret que o Chatwoot gera para o webhook. O cabeçalho `X-Chatwoot-Timestamp` traz o
+        horário Unix em segundos, e `X-Chatwoot-Delivery` identifica a entrega.
