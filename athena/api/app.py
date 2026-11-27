@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from athena.api.agente import router as agente_router
 from athena.api.auth import router as auth_router
 
 app = FastAPI(title="Athena", version="0.1.0")
 app.include_router(auth_router)
+app.include_router(agente_router)
 
 
 @app.exception_handler(HTTPException)
