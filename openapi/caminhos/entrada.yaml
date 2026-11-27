@@ -1,0 +1,22 @@
+webhookChatwoot:
+  post:
+    tags: [Entrada]
+    summary: Recebe eventos do Chatwoot (message_created)
+    x-estabilidade: firme
+    security:
+      - hmacChatwoot: []
+    description: |
+      Confere a assinatura antes de ler o corpo e recusa timestamp com mais de 5 minutos de
+      diferença. Responde 200 na hora e enfileira. Ignora nota privada, mensagem de agente e
+      de bot (inclui o usuário Copilot IA), para não classificar a própria nota.
+    parameters:
+      - { name: X-Chatwoot-Timestamp, in: header, required: true, schema: { type: string } }
+      - { name: X-Chatwoot-Delivery, in: header, schema: { type: string } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    responses:
+      "200": { description: Recebido }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }

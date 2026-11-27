@@ -1,0 +1,48 @@
+painel:
+  get:
+    tags: [Conversa]
+    summary: Tudo que o agente sabe da conversa aberta no Chatwoot
+    x-estabilidade: provisorio
+    description: |
+      Provisório só no schema `Pedido`, que depende da modelagem da consulta de pedidos nas
+      tabelas silver do lake. O resto do painel é firme.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: ID da conversa no Chatwoot
+    responses:
+      "200":
+        description: Painel da conversa
+        content:
+          application/json:
+            schema: { $ref: "../componentes.yaml#/components/schemas/PainelConversa" }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+feedback:
+  post:
+    tags: [Conversa]
+    summary: Voto do atendente na sugestão da IA
+    x-estabilidade: firme
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [voto]
+            properties:
+              voto: { type: string, enum: [up, down] }
+              motivo:
+                type: string
+                enum: [fato_errado, tom, oferta_errada, pedido_errado, incompleta, outro]
+              comentario: { type: string, maxLength: 500 }
+    responses:
+      "204": { description: Registrado }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }

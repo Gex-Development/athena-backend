@@ -1,0 +1,272 @@
+components:
+  responses:
+    Erro:
+      description: Erro
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Erro" }
+
+  schemas:
+    Erro:
+      type: object
+      required: [error, code]
+      properties:
+        error: { type: string, description: Mensagem para a tela }
+        code: { type: string, description: "Código estável (ex. forbidden, not_found, rate_limited)" }
+
+    Papel: { type: string, enum: [admin, analista] }
+    Canal: { type: string, enum: [email, sms, whatsapp, helpdesk_buygoods] }
+    Celula: { type: string, enum: [sac, retencao, bko, "48h"] }
+    Prioridade: { type: string, enum: [P0, P1, P2, P3] }
+    Confianca: { type: string, enum: [alta, a_confirmar, indefinido] }
+    Modo: { type: string, enum: [copiloto, automatico] }
+    Plataforma:
+      type: string
+      enum: [buygoods, clickbank, cartpanda, pagamerican, digistore, logicall, salesbound]
+    TipoEvento:
+      type: string
+      enum:
+        - recebida
+        - barrada_flood
+        - classificada
+        - pedido_buscado
+        - sugerida
+        - checagem_barrou
+        - enviada
+        - devolvida_humano
+        - feedback
+        - controle_alterado
+
+    Usuario:
+      type: object
+      required: [id, nome, email, papel, nomeAssinatura]
+      properties:
+        id: { type: string, description: E-mail em minúsculas }
+        nome: { type: string }
+        email: { type: string, format: email }
+        papel: { $ref: "#/components/schemas/Papel" }
+        nomeAssinatura: { type: string }
+
+    ConversaAthena:
+      type: object
+      description: Conversa do analista com a Athena no chat. Não é a conversa do Chatwoot.
+      required: [id, titulo, atualizadaEm]
+      properties:
+        id: { type: string, description: Id gerado pela Athena }
+        titulo: { type: string }
+        atualizadaEm: { type: string, format: date-time }
+
+    MensagemAthena:
+      type: object
+      required: [id, papel, texto, criadaEm]
+      properties:
+        id: { type: string }
+        papel: { type: string, enum: [user, assistant] }
+        texto: { type: string }
+        criadaEm: { type: string, format: date-time }
+        status: { type: string, enum: [done, error, stopped, pending] }
+
+    Classificacao:
+      type: object
+      required: [motivo, provavel, confianca, versaoCatalogo]
+      properties:
+        motivo:
+          type: [string, "null"]
+          description: Código do catálogo. Nulo quando a confiança não é alta.
+        submotivo: { type: [string, "null"] }
+        provavel:
+          type: [string, "null"]
+          description: Palpite mostrado só ao humano quando a confiança é a_confirmar.
+        confianca: { $ref: "#/components/schemas/Confianca" }
+        celula: { $ref: "#/components/schemas/Celula" }
+        risco: { type: number, minimum: 0, maximum: 1 }
+        prioridade: { $ref: "#/components/schemas/Prioridade" }
+        irritacao: { type: integer, minimum: 1, maximum: 5 }
+        versaoCatalogo: { type: string, examples: ["v3.4"] }
+      if:
+        properties: { confianca: { const: alta } }
+      then:
+        properties: { motivo: { type: string } }
+      else:
+        properties: { motivo: { type: "null" } }
+
+    Pedido:
+      type: object
+      description: Provisório. Os campos dependem da modelagem da consulta nas tabelas silver do lake.
+      required: [codigo, plataforma]
+      properties:
+        codigo: { type: string }
+        codigosDoGrupo:
+          type: array
+          items: { type: string }
+          description: Front, upsells e downsells da mesma compra.
+        plataforma: { $ref: "#/components/schemas/Plataforma" }
+        produto: { type: string }
+        compradoEm: { type: string, format: date-time }
+        garantiaAte: { type: string, format: date }
+        valorSemTaxasUsd:
+          type: number
+          description: Valor do pedido sem impostos e sem frete. É a base de cálculo da oferta.
+        valorCobradoUsd:
+          type: number
+          description: Total cobrado do cliente, com impostos e frete. Só aparece na conversa quando o cliente contesta as taxas.
+        estornadoUsd: { type: number }
+        pctEstornado: { type: number, minimum: 0, maximum: 1 }
+        desfecho:
+          type: string
+          enum: [sem_estorno, estorno_parcial, estorno_com_restocking, estorno_total, disputa]
+        rastreio:
+          type: object
+          properties:
+            codigo: { type: string }
+            transportadora: { type: string }
+            status: { type: string }
+            entregueEm: { type: [string, "null"], format: date-time }
+        comoAchou: { type: string, enum: [contato, codigo, ia, corrigido] }
+
+    Sugestao:
+      type: object
+      required: [id, textoCliente, criadaEm, naoEnviouPorque]
+      properties:
+        id: { type: string }
+        textoCliente: { type: string, description: Rascunho no idioma do cliente }
+        textoRevisao: { type: string, description: Tradução em PT-BR para o atendente }
+        ofertaPct: { type: [number, "null"], minimum: 0, maximum: 0.3 }
+        criadaEm: { type: string, format: date-time }
+        naoEnviouPorque:
+          type: array
+          description: Vazio quando a IA enviou sozinha.
+          items:
+            type: string
+            enum:
+              - modo_copiloto
+              - parada_ativa
+              - motivo_nao_liberado
+              - confianca_baixa
+              - prioridade_alta
+              - pedido_nao_identificado
+              - empate_de_pedidos
+              - checagem_barrou
+              - contato_em_rajada
+
+    PainelConversa:
+      type: object
+      required: [conversaId, classificacao, pedidos, pedidoEscolhido, sugestao]
+      properties:
+        conversaId: { type: integer, description: ID da conversa no Chatwoot }
+        canal: { $ref: "#/components/schemas/Canal" }
+        classificacao: { $ref: "#/components/schemas/Classificacao" }
+        pedidoEscolhido:
+          oneOf:
+            - { $ref: "#/components/schemas/Pedido" }
+            - { type: "null" }
+        pedidos:
+          type: array
+          items: { $ref: "#/components/schemas/Pedido" }
+        sugestao:
+          oneOf:
+            - { $ref: "#/components/schemas/Sugestao" }
+            - { type: "null" }
+        atualizadoEm: { type: string, format: date-time }
+
+    Evento:
+      type: object
+      required: [id, conversaId, tipo, emUtc, versaoCatalogo, duracaoMs, dados]
+      properties:
+        id: { type: string }
+        conversaId:
+          type: [integer, "null"]
+          description: ID da conversa no Chatwoot. Nulo só em evento global (`controle_alterado`).
+        tipo: { $ref: "#/components/schemas/TipoEvento" }
+        emUtc: { type: string, format: date-time }
+        versaoCatalogo: { type: [string, "null"] }
+        duracaoMs: { type: [integer, "null"] }
+        dados:
+          type: object
+          additionalProperties: true
+          description: Varia por tipo. Nunca traz texto de conversa, e-mail ou telefone.
+
+    Indicadores:
+      type: object
+      description: Provisório. Fecha na subtask "Definir Indicadores e Linhas de Base".
+      required: [periodo, totais, porDia]
+      properties:
+        periodo:
+          type: object
+          properties: { de: { type: string, format: date }, ate: { type: string, format: date } }
+        totais: { $ref: "#/components/schemas/IndicadoresDia" }
+        porDia:
+          type: array
+          items:
+            allOf:
+              - { $ref: "#/components/schemas/IndicadoresDia" }
+              - type: object
+                properties:
+                  dia: { type: string, format: date }
+        porMotivo:
+          type: array
+          items:
+            type: object
+            properties:
+              motivo: { type: string }
+              conversas: { type: integer }
+              pctSemEdicao: { type: number }
+              modo: { $ref: "#/components/schemas/Modo" }
+
+    IndicadoresDia:
+      type: object
+      properties:
+        conversas: { type: integer }
+        barradasFlood: { type: integer }
+        pctResolvidoSoIa: { type: number, description: "Meta do épico: 0,30" }
+        pctSugestaoSemEdicao: { type: number }
+        pctPedidoEncontrado: { type: number, description: "Linha de base 18–23/11: 0,519" }
+        pctConfiancaAlta: { type: number }
+        latenciaP95Seg: { type: number }
+        custoIaUsd: { type: number }
+
+    ItemFila:
+      type: object
+      required: [conversaId, prioridade, esperandoDesde, emRajada]
+      properties:
+        conversaId: { type: integer }
+        canal: { $ref: "#/components/schemas/Canal" }
+        motivo: { type: [string, "null"] }
+        celula: { $ref: "#/components/schemas/Celula" }
+        prioridade: { $ref: "#/components/schemas/Prioridade" }
+        risco: { type: number, minimum: 0, maximum: 1 }
+        esperandoDesde: { type: string, format: date-time }
+        emRajada: { type: boolean }
+
+    ModoMotivo:
+      type: object
+      required: [codigo, nome, modo, bloqueadoPorRegra]
+      properties:
+        codigo: { type: string }
+        nome: { type: string }
+        modo: { $ref: "#/components/schemas/Modo" }
+        bloqueadoPorRegra:
+          type: boolean
+          description: Saúde, chargeback e fraude nunca vão para automático.
+        pctSemEdicao14d: { type: [number, "null"] }
+        justificativa: { type: [string, "null"] }
+        alteradoPor: { type: [string, "null"], description: E-mail do admin que mudou }
+        alteradoEm: { type: [string, "null"], format: date-time }
+
+    Parada:
+      type: object
+      required: [ativo]
+      properties:
+        ativo: { type: boolean, description: "true = agente parado (só copiloto)" }
+        motivo: { type: [string, "null"] }
+        alteradoPor: { type: [string, "null"] }
+        alteradoEm: { type: [string, "null"], format: date-time }
+
+    Corte:
+      type: object
+      required: [pergunta, alto, baixo]
+      properties:
+        pergunta: { type: string, description: "Código da pergunta no catálogo (ex. C1 = motivo)" }
+        alto: { type: number, minimum: 0, maximum: 1 }
+        baixo: { type: number, minimum: 0, maximum: 1 }
+        certificadaEm: { type: [string, "null"], format: date }

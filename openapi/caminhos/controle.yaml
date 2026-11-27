@@ -1,0 +1,129 @@
+motivos:
+  get:
+    tags: [Controle]
+    summary: Modo de cada motivo (copiloto ou automático)
+    x-estabilidade: firme
+    x-papel: admin
+    responses:
+      "200":
+        description: Um item por motivo do catálogo
+        content:
+          application/json:
+            schema: { type: array, items: { $ref: "../componentes.yaml#/components/schemas/ModoMotivo" } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+motivo:
+  put:
+    tags: [Controle]
+    summary: Libera ou trava o envio automático de um motivo
+    x-estabilidade: firme
+    x-papel: admin
+    description: |
+      Grava `alteradoPor`, `alteradoEm` e `justificativa` no próprio motivo. Grava também o
+      evento global `controle_alterado`, com `conversaId` nulo e `dados` = {alvo, valor}.
+    parameters:
+      - { name: codigo, in: path, required: true, schema: { type: string } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [modo, justificativa]
+            properties:
+              modo: { $ref: "../componentes.yaml#/components/schemas/Modo" }
+              justificativa:
+                type: string
+                minLength: 10
+                description: O número que sustenta a mudança (ex. "92% sem edição em 2 semanas").
+    responses:
+      "200":
+        description: Novo estado
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/ModoMotivo" } } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "404": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "409":
+        description: Saúde, chargeback e fraude nunca vão para automático (code `bloqueado_por_regra`).
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/Erro" } } }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+parada:
+  get:
+    tags: [Controle]
+    summary: Estado do botão de parada
+    x-estabilidade: firme
+    x-papel: admin
+    responses:
+      "200":
+        description: Estado atual
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/Parada" } } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+  post:
+    tags: [Controle]
+    summary: Liga ou desliga todo envio automático, na hora
+    x-estabilidade: firme
+    x-papel: admin
+    description: Grava `alteradoPor` e `alteradoEm` e o evento global `controle_alterado`.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ativo]
+            properties:
+              ativo: { type: boolean, description: "true = agente parado (só copiloto)" }
+              motivo: { type: string }
+    responses:
+      "200":
+        description: Novo estado
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/Parada" } } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+cortes:
+  get:
+    tags: [Controle]
+    summary: Corte de confiança por pergunta do catálogo
+    x-estabilidade: firme
+    x-papel: admin
+    responses:
+      "200":
+        description: Cortes atuais
+        content:
+          application/json:
+            schema: { type: array, items: { $ref: "../componentes.yaml#/components/schemas/Corte" } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+  put:
+    tags: [Controle]
+    summary: Ajusta cortes de perguntas já certificadas
+    x-estabilidade: firme
+    x-papel: admin
+    description: |
+      Grava só as perguntas enviadas. As outras ficam como estão. Cada pergunta alterada
+      grava o evento global `controle_alterado`.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            minItems: 1
+            items: { $ref: "../componentes.yaml#/components/schemas/Corte" }
+    responses:
+      "200":
+        description: Todos os cortes, já com as mudanças
+        content:
+          application/json:
+            schema: { type: array, items: { $ref: "../componentes.yaml#/components/schemas/Corte" } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "409":
+        description: Pergunta sem certificação ou `baixo` maior que `alto` (code `corte_invalido`).
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/Erro" } } }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }

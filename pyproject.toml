@@ -16,7 +16,10 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx2>=2.16",
+    "jsonschema>=4.23",
+    "openapi-spec-validator>=0.7",
     "pytest>=8.3",
+    "pyyaml>=6.0",
     "ruff>=0.8",
 ]
 

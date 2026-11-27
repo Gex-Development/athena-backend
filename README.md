@@ -15,10 +15,11 @@ Sem Docker, com [uv](https://docs.astral.sh/uv/) e um Postgres rodando:
 ```bash
 uv sync
 cp .env.example .env
+uv run alembic upgrade head
 uv run uvicorn athena.main:app --reload
 ```
 
-A API sobe em `http://127.0.0.1:8000`. `GET /health` responde `{"status":"ok"}`.
+A API sobe em `http://127.0.0.1:8000`. `GET /health` responde `{"status":"ok"}`. As migrations criam o schema `athena`; as tabelas do Agno ficam no schema `ai`. No Docker, o container da API roda as migrations antes de subir, com trava para uma réplica por vez.
 
 ## Produção
 
@@ -31,6 +32,8 @@ uv run ruff check .
 uv run ruff format --check .
 uv run pytest
 ```
+
+Os testes de banco só rodam com `ATHENA_TEST_DATABASE_URL` apontando para um Postgres descartável, com nome terminado em `_teste` ou `_test` (por exemplo `postgresql+psycopg://athena:athena@127.0.0.1:5432/athena_teste`). Eles apagam e recriam tabelas, e recusam qualquer outro nome. A variável pode vir do ambiente ou do `.env`.
 
 A CI roda ruff, pytest e gitleaks em toda PR para `development` e `main`.
 
