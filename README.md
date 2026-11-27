@@ -1,18 +1,28 @@
 # athena-backend
 
-Athena V2 · agente de atendimento GEX (Python 3.12, uv, FastAPI, Agno, Postgres/PgVector).
+Athena V2 · agente de atendimento GEX (Python 3.14, uv, FastAPI, AgentOS do Agno, Postgres/PgVector).
 
 ## Rodar local
 
-Pré-requisito: [uv](https://docs.astral.sh/uv/) instalado. O uv baixa o Python 3.12 se faltar.
+Com Docker, sobe o Postgres com pgvector e a API:
+
+```bash
+docker compose up --build
+```
+
+Sem Docker, com [uv](https://docs.astral.sh/uv/) e um Postgres rodando:
 
 ```bash
 uv sync
 cp .env.example .env
-uv run uvicorn athena.api.app:app --reload
+uv run uvicorn athena.main:app --reload
 ```
 
 A API sobe em `http://127.0.0.1:8000`. `GET /health` responde `{"status":"ok"}`.
+
+## Produção
+
+Roda no Dokploy a partir do `Dockerfile`. Variáveis obrigatórias: `ATHENA_DATABASE_URL` e, fora do ambiente `local`, `ATHENA_JWT_CHAVE_PUBLICA` (chave RS256 que o AgentOS usa para proteger as rotas dele). As rotas `/v1/*` usam o login da Athena. O comando `chill` deixa o container parado, para o worker enquanto ele não tem processo próprio.
 
 ## Verificações
 
