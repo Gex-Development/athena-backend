@@ -1,0 +1,69 @@
+import re
+from pathlib import Path
+
+import pytest
+import yaml
+from jsonschema import Draft202012Validator, ValidationError
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
+
+PASTA = Path(__file__).resolve().parent.parent / "openapi"
+
+
+def carregar(nome: str) -> dict:
+    return yaml.safe_load((PASTA / nome).read_text(encoding="utf-8"))
+
+
+def referencias(no) -> list[str]:
+    if isinstance(no, dict):
+        achadas = [no["$ref"]] if isinstance(no.get("$ref"), str) else []
+        return achadas + [r for valor in no.values() for r in referencias(valor)]
+    if isinstance(no, list):
+        return [r for item in no for r in referencias(item)]
+    return []
+
+
+def validador(schema: str) -> Draft202012Validator:
+    recurso = Resource.from_contents(
+        carregar("componentes.yaml"), default_specification=DRAFT202012
+    )
+    registro = Registry().with_resource("urn:componentes", recurso)
+    alvo = {"$ref": f"urn:componentes#/components/schemas/{schema}"}
+    return Draft202012Validator(alvo, registry=registro)
+
+
+def test_schemas_dos_componentes_sao_json_schema_valido():
+    for schema in carregar("componentes.yaml")["components"]["schemas"].values():
+        Draft202012Validator.check_schema(schema)
+
+
+def test_referencias_internas_usam_components_e_existem():
+    componentes = carregar("componentes.yaml")
+
+    for ref in referencias(componentes):
+        partes = re.fullmatch(r"#/components/(\w+)/(\w+)", ref)
+        assert partes, ref
+        secao, nome = partes.groups()
+        assert nome in componentes["components"][secao], ref
+
+
+def test_motivo_so_vem_preenchido_com_confianca_alta():
+    classificacao = validador("Classificacao")
+    base = {"provavel": None, "versaoCatalogo": "v3.4"}
+
+    classificacao.validate({**base, "motivo": "rastreio", "confianca": "alta"})
+    classificacao.validate(
+        {**base, "motivo": None, "provavel": "rastreio", "confianca": "a_confirmar"}
+    )
+    for confianca in ("a_confirmar", "indefinido"):
+        with pytest.raises(ValidationError):
+            classificacao.validate({**base, "motivo": "rastreio", "confianca": confianca})
+    with pytest.raises(ValidationError):
+        classificacao.validate({**base, "motivo": None, "confianca": "alta"})
+
+
+def test_pedido_separa_base_da_oferta_do_valor_cobrado():
+    pedido = carregar("componentes.yaml")["components"]["schemas"]["Pedido"]["properties"]
+
+    assert {"valorSemTaxasUsd", "valorCobradoUsd"} <= set(pedido)
+    assert "valorUsd" not in pedido
