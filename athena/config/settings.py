@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     dominios_permitidos: str = "gexcorp.com.br,institutoexperience.com.br"
     admins: str = ""
     sessao_dias: int = 30
+    eventos_retencao_dias: int = 180
+    smtp_host: str = "mail.gexcorp.com.br"
+    smtp_porta: int = 465
+    smtp_usuario: str | None = None
+    smtp_senha: str | None = None
+    magic_link_minutos: int = 15
+    magic_link_limite: int = 3
 
     @field_validator("jwt_chave_publica", "jwt_chave_privada")
     @classmethod
