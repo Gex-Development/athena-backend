@@ -28,6 +28,7 @@ paths:
       operationId: health
       summary: Verifica se a API está no ar
       x-estabilidade: firme
+      x-implementada: true
       security: []
       responses:
         "200":

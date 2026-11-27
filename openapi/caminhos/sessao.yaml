@@ -3,6 +3,7 @@ googleStart:
     tags: [Sessão]
     summary: Começa o login com Google
     x-estabilidade: firme
+    x-implementada: true
     security: []
     responses:
       "302":
@@ -13,6 +14,7 @@ googleCallback:
     tags: [Sessão]
     summary: Volta do Google e cria a sessão
     x-estabilidade: firme
+    x-implementada: true
     security: []
     parameters:
       - { name: code, in: query, required: true, schema: { type: string } }
@@ -29,6 +31,7 @@ magicLink:
     tags: [Sessão]
     summary: Envia o link de acesso por e-mail
     x-estabilidade: firme
+    x-implementada: true
     security: []
     description: |
       Responde igual para qualquer e-mail, com ou sem acesso. Só e-mails dos domínios
@@ -45,7 +48,7 @@ magicLink:
               email: { type: string, format: email, maxLength: 254 }
     responses:
       "204": { description: Pedido aceito }
-      "422": { description: E-mail em formato inválido }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "429": { $ref: "../componentes.yaml#/components/responses/Erro" }
 
 magicLinkEntrar:
@@ -53,6 +56,7 @@ magicLinkEntrar:
     tags: [Sessão]
     summary: Entra pelo link recebido por e-mail
     x-estabilidade: firme
+    x-implementada: true
     security: []
     parameters:
       - { name: token, in: query, required: true, schema: { type: string } }
@@ -67,6 +71,7 @@ logout:
     tags: [Sessão]
     summary: Encerra a sessão
     x-estabilidade: firme
+    x-implementada: true
     responses:
       "204": { description: Sessão encerrada e cookie apagado }
 
@@ -75,6 +80,7 @@ me:
     tags: [Sessão]
     summary: Quem está logado
     x-estabilidade: firme
+    x-implementada: true
     description: Quem está em `ATHENA_ADMINS` é admin. O resto dos domínios permitidos é analista.
     responses:
       "200":

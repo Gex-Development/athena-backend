@@ -15,6 +15,8 @@ Cada rota tem `x-estabilidade`:
 - `firme`: pode ser implementada sem dúvida. Muda só pela regra abaixo.
 - `provisorio`: depende de uma task ainda aberta, que aparece na descrição da rota.
 
+Firme não quer dizer que a rota já existe. A rota que já responde no backend tem `x-implementada: true`, e um teste confere que essa marcação bate com as rotas do backend nos dois sentidos.
+
 ## Regra de mudança
 
 O contrato só muda por PR aprovada pelo dono do Front e pelo dono do Backend. Mudança que quebra quem já consome a rota sobe a versão do contrato e entra na descrição da PR como quebra de contrato.

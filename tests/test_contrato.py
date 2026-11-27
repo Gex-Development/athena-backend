@@ -55,14 +55,20 @@ def test_contrato_e_openapi_3_1_valido():
     validate(spec, base_uri=base_uri)
 
 
-def test_toda_rota_do_backend_esta_no_contrato():
-    contrato = operacoes_do_contrato()
+def test_x_implementada_bate_com_as_rotas_do_backend():
+    no_backend = {
+        (metodo, rota.path.removeprefix("/v1"))
+        for rota in app.routes
+        if isinstance(rota, APIRoute)
+        for metodo in rota.methods
+    }
+    marcadas = {
+        chave
+        for chave, operacao in operacoes_do_contrato().items()
+        if operacao.get("x-implementada") is True
+    }
 
-    for rota in app.routes:
-        if isinstance(rota, APIRoute):
-            caminho = rota.path.removeprefix("/v1")
-            for metodo in rota.methods:
-                assert (metodo, caminho) in contrato, (metodo, rota.path)
+    assert marcadas == no_backend
 
 
 def test_schemas_dos_componentes_sao_json_schema_valido():

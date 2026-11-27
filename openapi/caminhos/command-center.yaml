@@ -3,6 +3,7 @@ eventos:
     tags: [Command Center]
     summary: Trilha de decisões do agente
     x-estabilidade: firme
+    x-implementada: true
     x-papel: admin
     parameters:
       - { name: conversa, in: query, schema: { type: integer } }
@@ -24,3 +25,4 @@ eventos:
                 proximoCursor: { type: [string, "null"] }
       "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
