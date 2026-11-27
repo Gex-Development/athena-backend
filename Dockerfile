@@ -11,6 +11,7 @@ RUN uv export --locked --no-dev --no-emit-project --no-hashes -o /tmp/requiremen
     && uv pip install --system -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt
 
+COPY alembic.ini ./
 COPY athena ./athena
 COPY catalogo ./catalogo
 COPY db ./db
