@@ -26,3 +26,47 @@ eventos:
       "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
       "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+indicadores:
+  get:
+    tags: [Command Center]
+    summary: Indicadores do agente no período
+    x-estabilidade: provisorio
+    x-papel: admin
+    description: Provisório até a subtask "Definir Indicadores e Linhas de Base" fechar a lista.
+    parameters:
+      - { name: de, in: query, required: true, schema: { type: string, format: date } }
+      - { name: ate, in: query, required: true, schema: { type: string, format: date } }
+      - { name: canal, in: query, schema: { $ref: "../componentes.yaml#/components/schemas/Canal" } }
+    responses:
+      "200":
+        description: Totais do período e série diária
+        content: { application/json: { schema: { $ref: "../componentes.yaml#/components/schemas/Indicadores" } } }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }
+
+fila:
+  get:
+    tags: [Command Center]
+    summary: Conversas ao vivo, por prioridade
+    x-estabilidade: firme
+    x-papel: admin
+    parameters:
+      - { name: prioridade, in: query, schema: { $ref: "../componentes.yaml#/components/schemas/Prioridade" } }
+      - { name: celula, in: query, schema: { $ref: "../componentes.yaml#/components/schemas/Celula" } }
+      - { name: cursor, in: query, schema: { type: string } }
+    responses:
+      "200":
+        description: Da prioridade mais alta para a mais baixa, e da espera mais longa para a mais curta
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itens, proximoCursor]
+              properties:
+                itens: { type: array, items: { $ref: "../componentes.yaml#/components/schemas/ItemFila" } }
+                proximoCursor: { type: [string, "null"] }
+      "401": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "403": { $ref: "../componentes.yaml#/components/responses/Erro" }
+      "422": { $ref: "../componentes.yaml#/components/responses/Erro" }

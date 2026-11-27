@@ -106,3 +106,33 @@ def test_pedido_separa_base_da_oferta_do_valor_cobrado():
 
     assert {"valorSemTaxasUsd", "valorCobradoUsd"} <= set(pedido)
     assert "valorUsd" not in pedido
+
+
+def test_so_painel_e_indicadores_ficam_provisorios():
+    operacoes = operacoes_do_contrato()
+    provisorias = {
+        chave
+        for chave, operacao in operacoes.items()
+        if operacao.get("x-estabilidade") == "provisorio"
+    }
+
+    assert provisorias == {("GET", "/chatwoot/conversas/{id}"), ("GET", "/agente/indicadores")}
+    assert all("x-estabilidade" in operacao for operacao in operacoes.values())
+
+
+def test_regras_do_controle_ficam_travadas():
+    operacoes = operacoes_do_contrato()
+    motivo = operacoes[("PUT", "/agente/motivos/{codigo}")]
+    corpo = motivo["requestBody"]["content"]["application/json"]["schema"]
+    cortes = operacoes[("PUT", "/agente/cortes")]
+    evento = carregar("componentes.yaml")["components"]["schemas"]["Evento"]
+
+    assert "justificativa" in corpo["required"]
+    assert corpo["properties"]["justificativa"]["minLength"] == 10
+    assert "bloqueado_por_regra" in motivo["responses"]["409"]["description"]
+    assert "corte_invalido" in cortes["responses"]["409"]["description"]
+    assert cortes["requestBody"]["content"]["application/json"]["schema"]["minItems"] == 1
+    for chave in (("PUT", "/agente/motivos/{codigo}"), ("POST", "/agente/parada")):
+        assert "controle_alterado" in operacoes[chave]["description"]
+    assert "controle_alterado" in cortes["description"]
+    assert "null" in evento["properties"]["conversaId"]["type"]
