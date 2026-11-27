@@ -3,10 +3,13 @@ name = "athena-backend"
 version = "0.1.0"
 description = "Athena V2 · agente de atendimento GEX"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.14,<3.15"
 dependencies = [
+    "agno[os,pgvector,psycopg,openai]==3.1.12",
+    "alembic>=1.16",
     "fastapi>=0.115",
     "pydantic-settings>=2.6",
+    "pyjwt[crypto]>=2.10",
     "uvicorn[standard]>=0.32",
 ]
 
@@ -25,7 +28,7 @@ build-backend = "hatchling.build"
 packages = ["athena"]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
