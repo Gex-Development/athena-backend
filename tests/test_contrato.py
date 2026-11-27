@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-from fastapi.routing import APIRoute
 from jsonschema import Draft202012Validator, ValidationError
 from openapi_spec_validator import validate
 from openapi_spec_validator.readers import read_from_filename
@@ -57,11 +56,12 @@ def test_contrato_e_openapi_3_1_valido():
 
 def test_x_implementada_bate_com_as_rotas_do_backend():
     no_backend = {
-        (metodo, rota.path.removeprefix("/v1"))
-        for rota in app.routes
-        if isinstance(rota, APIRoute)
-        for metodo in rota.methods
+        (metodo.upper(), caminho.removeprefix("/v1"))
+        for caminho, item in app.openapi()["paths"].items()
+        if caminho.startswith("/v1/") or caminho == "/health"
+        for metodo in item
     }
+    assert len(no_backend) >= 8
     marcadas = {
         chave
         for chave, operacao in operacoes_do_contrato().items()
